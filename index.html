@@ -178,6 +178,24 @@
   .mini-demo-row button{font-size:10px; padding:7px 8px;}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @media (max-width:430px){ .demo-control{right:10px; transform:none;} }
+
+  /* ===== 精致度打磨 v3：留白、阴影、圆角、升温红条、动效 ===== */
+  .view{ padding:10px 16px 180px; }
+  .card{ border-radius:16px; box-shadow:0 6px 18px rgba(92,64,34,.07); transition:transform .14s ease, box-shadow .2s ease; }
+  .card:active{ transform:scale(.985); }
+  .card.hot-card{ position:relative; overflow:hidden; }
+  .card.hot-card::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:linear-gradient(180deg,var(--orange),var(--red)); }
+  .group-title{ margin:20px 4px 10px; letter-spacing:.01em; }
+  .group-title.hot{ font-weight:900; }
+  .thumb{ box-shadow:inset 0 0 0 1px rgba(169,105,42,.18), 0 2px 7px rgba(92,64,34,.08); }
+  .hero{ border-radius:22px; }
+  .day{ border-radius:18px; box-shadow:0 7px 22px rgba(92,64,34,.06); }
+  .bubble,.scan-panel,.intent-card{ border-radius:20px; }
+  .deliv-head .title{ letter-spacing:-.03em; }
+  .day .from{ border-radius:12px; line-height:1.6; }
+  .source-tag{ box-shadow:0 2px 6px rgba(217,119,6,.10); }
+  .fab{ box-shadow:0 12px 30px rgba(217,119,6,.30); }
+  .view.active{ animation:rise .32s ease both; }
 </style>
 </head>
 <body>
@@ -892,28 +910,28 @@ async function runAutoDemo(){
   demoRunning = true;
   setDemoButton(true);
   try{
-    setDemoStatus('第 1 步：展示收藏夹黑洞');
+    setDemoStatus('第 1 步：你的收藏夹——几十条刷到就存、却在吃灰');
     resetDemoState();
-    await wait(1200);
+    await wait(3000);
 
-    setDemoStatus('第 2 步：唤醒收藏夹，识别升温意图');
+    setDemoStatus('第 2 步：一键唤醒，AI 读懂全部收藏、识别升温意图');
     awaken();
-    await wait(1500);
+    await wait(3500);
 
-    setDemoStatus('第 3 步：模拟搭子主动提醒');
+    setDemoStatus('第 3 步：搭子主动提醒——读懂 41 条、挑出在升温的');
     goSignal();
-    await wait(1800);
+    await wait(5000);
 
-    setDemoStatus('第 4 步：把收藏变成两天一夜露营计划');
+    setDemoStatus('第 4 步：当场把 8 条露营收藏，拧成可执行计划');
     await goDeliver();
-    await wait(1500);
+    await wait(4000);
 
-    setDemoStatus('第 5 步：用户说想轻松点，自动精简');
+    setDemoStatus('第 5 步：一句「想轻松点」，当场重排');
     const ai = document.getElementById('adjustInput'); if(ai){ ai.value = '想轻松点，帮我精简'; updateAdjustButton(); }
     await doAdjust();                       // await 到真实重排替换完成（录屏可剪掉等待）
-    await wait(1500);
+    await wait(3500);
 
-    setDemoStatus('演示完成：完整闭环已跑通');
+    setDemoStatus('演示完成：从收藏夹 → 读懂 → 兑现，完整闭环');
   }catch(e){
     console.error('[auto-demo] failed', e);
     setDemoStatus('演示中断：请手动继续');
