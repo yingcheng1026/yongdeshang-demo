@@ -433,23 +433,23 @@ function getFavoritesByCategory(cat){ return getFavorites().filter(item => item.
 function show(id){ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0,0); }
 
 function renderCollections(awakened){
-  const HOT_CAT = getIntentSignal().cat;  // 升温分类跟着信号走，换场景不写死
+  const HOT_CATS = ['周末露营','在家做饭'];  // 当前在升温的意图（可多个）
   const groups = {}; getFavorites().forEach(it=>{ (groups[it.cat]=groups[it.cat]||[]).push(it); });
   // 唤醒后，把"升温"组排最前并高亮
-  const order = awakened ? [HOT_CAT,...Object.keys(groups).filter(c=>c!==HOT_CAT)] : Object.keys(groups);
+  const order = awakened ? [...HOT_CATS.filter(c=>groups[c]), ...Object.keys(groups).filter(c=>!HOT_CATS.includes(c))] : Object.keys(groups);
   let html = `
     <section class="hero">
       <div class="eyebrow">DORMANT FAVORITES</div>
       <div class="hero-title">你收藏的“以后有用”，不该继续吃灰。</div>
       <div class="hero-copy">用得上会把收藏瞬间的动机叫回来：不是让你再刷一遍视频，而是直接把它们拧成今天能执行的计划。</div>
       <div class="stats">
-        <div class="stat"><strong>999</strong><span>条沉睡收藏</span></div>
-        <div class="stat"><strong>32天</strong><span>没认真打开</span></div>
-        <div class="stat"><strong>87%</strong><span>没有被使用</span></div>
+        <div class="stat"><strong>${getFavorites().length}</strong><span>条收藏已读懂</span></div>
+        <div class="stat"><strong>${new Set(getFavorites().map(f=>f.cat)).size}</strong><span>类沉睡意图</span></div>
+        <div class="stat"><strong>2</strong><span>个正在升温</span></div>
       </div>
     </section>`;
   order.forEach(cat=>{
-    const hot = awakened && cat===HOT_CAT;
+    const hot = awakened && HOT_CATS.includes(cat);
     html += `<div class="group-title ${hot?'hot':''}">${hot?'升温中 · ':''}${cat}（${groups[cat].length}）</div>`;
     groups[cat].forEach(it=>{
       html += `<div class="card ${hot?'hot-card':''}" id="item-${it.id}"><div class="thumb">${it.icon}</div><div class="meta">
@@ -463,16 +463,16 @@ function renderCollections(awakened){
 }
 
 let awakened=false;
-function awaken(){ awakened=true; document.getElementById('subtitle').textContent='已读懂你的收藏，识别出 1 个升温意图'; renderCollections(true); }
+function awaken(){ awakened=true; document.getElementById('subtitle').textContent='已读懂你的收藏，识别出 2 个升温意图'; renderCollections(true); }
 function goSignal(){
   document.getElementById('view-signal').innerHTML = `
     <div class="scan-panel">
-      <div class="scan-title">AI 正在唤醒收藏夹 <span>5/5 完成</span></div>
-      <div class="scan-row"><i class="scan-dot"></i>正在读取视频画面和标题...</div>
-      <div class="scan-row"><i class="scan-dot"></i>正在理解讲解内容...</div>
-      <div class="scan-row"><i class="scan-dot"></i>正在捕捉你当时为什么收藏...</div>
-      <div class="scan-row"><i class="scan-dot"></i>正在聚类沉睡意图...</div>
-      <div class="scan-row"><i class="scan-dot"></i>找到最近升温任务：${getIntentSignal().cat}</div>
+      <div class="scan-title">AI 读懂了你的收藏夹 <span>${getFavorites().length} 条已读懂</span></div>
+      <div class="scan-row"><i class="scan-dot"></i>读取了 ${getFavorites().length} 条收藏的视频画面 + 标题 + 讲解</div>
+      <div class="scan-row"><i class="scan-dot"></i>捕捉你当时为什么收藏，归成 ${new Set(getFavorites().map(f=>f.cat)).size} 类意图</div>
+      <div class="scan-row"><i class="scan-dot"></i>剔除沙雕动物 / 穿搭等噪声，挑出真正在升温的</div>
+      <div class="scan-row"><i class="scan-dot"></i>🔥 2 个意图正在升温：周末露营、在家做饭</div>
+      <div class="scan-row"><i class="scan-dot"></i>最该先办的：${getIntentSignal().cat}（近一周连存 ${getIntentSignal().count} 条）</div>
     </div>
     <div class="intent-card">
       <div class="intent-top"><div class="intent-name">🔥 ${getIntentSignal().cat}</div><div class="heat">升温 ${getIntentSignal().heat}%</div></div>
@@ -505,7 +505,7 @@ function findItemBySourceName(name){
 function renderSourceTags(fromText){
   const names = [...String(fromText || '').matchAll(/「([^」]+)」/g)].map(m=>m[1]);
   if(!names.length) return escapeHtml(fromText || '出处：收藏夹');
-  return '出处：' + names.map(name => {
+  return '▶ 出自你抖音收藏的：' + names.map(name => {
     const item = findItemBySourceName(name);
     const target = item ? item.id : '';
     return `<button class="source-tag" type="button" onclick="jumpToCollection('${target}')">${escapeHtml(name)}</button>`;
@@ -513,7 +513,7 @@ function renderSourceTags(fromText){
 }
 function jumpToCollection(itemId){
   awakened = true;
-  document.getElementById('subtitle').textContent='已读懂你的收藏，识别出 1 个升温意图';
+  document.getElementById('subtitle').textContent='已读懂你的收藏，识别出 2 个升温意图';
   renderCollections(true);
   show('view-collections');
   requestAnimationFrame(()=>{
