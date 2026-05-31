@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>用得上 · 把收藏变成行动</title>
+<!-- 真实 API key 外置在 config.local.js（已 .gitignore，不进仓库）。没有这个文件时 H5 自动走本地兜底、照常演示。 -->
+<script src="config.local.js"></script>
+<!-- 离线二维码库：现场局域网扫码用，纯本地生成、无需外网 -->
+<script src="qrcode.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{
+    --bg:#f8f3ea; --panel:#fffdf8; --card:#ffffff; --text:#2b2118; --muted:#7a6a5a;
+    --line:#eadfce; --soft:#f4eadb; --orange:#d97706; --orange2:#f59e0b; --red:#fe2c55;
+    --shadow:0 14px 40px rgba(92,64,34,.12); --shadow2:0 8px 22px rgba(217,119,6,.24);
+  }
+  body { min-height:100vh; background:linear-gradient(180deg,#fbf6ee 0%,#efe1cf 100%); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif; display:flex; justify-content:center; color:var(--text); }
+  .phone { width:100%; max-width:420px; min-height:100vh; background:var(--bg); color:var(--text); position:relative; overflow-x:hidden; box-shadow:0 0 0 1px rgba(120,85,45,.08); }
+  .topbar { padding:18px 18px 12px; position:sticky; top:0; background:rgba(248,243,234,.88); backdrop-filter:blur(18px); z-index:10; border-bottom:1px solid rgba(232,222,210,.55); }
+  .topbar h1 { font-size:21px; letter-spacing:-.03em; font-weight:800; }
+  .topbar h1 span{ color:var(--orange); }
+  .topbar .sub { font-size:12px; color:var(--muted); margin-top:4px; }
+  .view { display:none; padding:10px 14px 180px; } .view.active { display:block; animation:rise .28s ease both; }
+  @keyframes rise { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none} }
+  .group-title { font-size:13px; color:var(--muted); margin:17px 4px 9px; display:flex; align-items:center; gap:6px; font-weight:700;}
+  .group-title.hot { color:var(--orange); }
+  .card { background:var(--card); border:1px solid rgba(232,222,210,.9); border-radius:18px; padding:13px 14px; margin-bottom:10px; display:flex; gap:12px; align-items:center; box-shadow:0 8px 20px rgba(92,64,34,.06); }
+  .card.hot-card { border-color:rgba(245,158,11,.45); background:linear-gradient(180deg,#fffdf8,#fff9ef); }
+  .thumb { width:54px; height:54px; border-radius:14px; background:radial-gradient(circle at 32% 26%,#fff4e0,#f0d6ad); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:"Songti SC","STSong","SimSun",serif; font-size:27px; font-weight:700; color:#a9692a; box-shadow:inset 0 0 0 1px rgba(169,105,42,.22);}
+  .hot-card .thumb{ color:#b45309; background:radial-gradient(circle at 32% 26%,#ffe6bf,#eec188); box-shadow:inset 0 0 0 1px rgba(180,83,9,.32);}
+  .card .meta { flex:1; min-width:0; }
+  .card .t { font-size:14px; line-height:1.35; margin-bottom:4px; font-weight:650; color:var(--text); }
+  .card .m { font-size:11px; color:var(--muted); }
+  .card .why { font-size:11px; color:var(--orange); margin-top:5px; opacity:.95; line-height:1.35;}
+  .fab { position:fixed; bottom:calc(22px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:calc(100% - 56px); max-width:360px; background:linear-gradient(135deg,var(--orange),var(--orange2)); color:#fff; border:none; padding:15px; border-radius:999px; font-size:16px; font-weight:800; box-shadow:var(--shadow2); z-index:20;}
+  .signal-wrap { padding:28px 14px 110px; }
+  .bubble { background:rgba(255,255,255,.86); border-radius:26px; padding:18px; border:1px solid rgba(232,222,210,.95); box-shadow:var(--shadow); position:relative; overflow:hidden;}
+  .bubble:before{content:""; position:absolute; inset:0 0 auto; height:4px; background:linear-gradient(90deg,var(--orange),#ffd08a,var(--red));}
+  .bubble .who{ font-size:12px; color:var(--orange); margin-bottom:10px; display:flex; align-items:center; gap:6px; font-weight:800;}
+  .bubble .msg{ font-size:17px; line-height:1.58; font-weight:650; letter-spacing:-.01em; }
+  .bubble .ev{ font-size:12px; color:var(--muted); margin-top:12px; background:#fff7ea; border:1px solid #f0dfc8; padding:10px 11px; border-radius:14px; line-height:1.45;}
+  .actions{ display:flex; gap:10px; margin-top:16px;}
+  .actions button{ flex:1; padding:13px; border-radius:999px; border:none; font-size:15px; font-weight:800;}
+  .btn-primary{ background:linear-gradient(135deg,var(--orange),var(--orange2)); color:#fff; box-shadow:0 8px 18px rgba(217,119,6,.22);} .btn-ghost{ background:#f0e5d5; color:#6b5947;}
+  .deliv-head{ padding:8px 4px 14px;} .deliv-head .title{ font-size:22px; font-weight:850; letter-spacing:-.04em;}
+  .deliv-head .based{ font-size:12px; color:var(--muted); margin-top:7px; line-height:1.55;}
+  .day { background:var(--card); border:1px solid rgba(232,222,210,.95); border-radius:19px; padding:14px 15px; margin-bottom:11px; box-shadow:0 8px 22px rgba(92,64,34,.07); }
+  .day .d{ font-size:12px; color:var(--orange); font-weight:850; } .day .th{ font-size:16px; margin:4px 0 7px; font-weight:800;}
+  .day .task{ font-size:13px; color:#4c3d30; line-height:1.48; white-space:pre-line; }
+  .day-output-top{font-size:13px; color:#2f241b; line-height:1.45; background:linear-gradient(180deg,#fff7ea,#f9efe0); border:1px solid #eddec8; border-radius:15px; padding:10px 11px; margin:9px 0 9px; font-weight:800;}
+  .day-output-top span{display:block; font-size:11px; color:var(--orange); margin-bottom:3px; font-weight:900;}
+  .day details{margin-top:8px; border-top:1px dashed #eadfce; padding-top:8px;}
+  .day summary{cursor:pointer; list-style:none; color:#8a560b; font-size:12px; font-weight:900;}
+  .day summary::-webkit-details-marker{display:none;}
+  .plan-overview{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:4px 0 12px;}
+  .overview-chip{border:1px solid #efd9ba; background:#fff8ed; border-radius:16px; padding:9px 8px; text-align:left; color:#5b3d16; box-shadow:0 6px 14px rgba(92,64,34,.06);}
+  .overview-chip b{display:block; color:var(--orange); font-size:11px; margin-bottom:4px;}
+  .overview-chip span{display:block; font-size:12px; line-height:1.28; font-weight:850;}
+  .why-card{background:#fffdf8; border:1px solid rgba(232,222,210,.95); border-radius:18px; padding:13px 14px; margin:0 0 12px; box-shadow:0 8px 20px rgba(92,64,34,.06);}
+  .why-card .why-title{font-size:13px; font-weight:950; color:#3f2d1c; margin-bottom:7px;}
+  .why-card .why-copy{font-size:12px; line-height:1.55; color:var(--muted);}
+  .why-card .why-metrics{display:flex; flex-wrap:wrap; gap:6px; margin-top:9px;}
+  .why-card .why-metrics span{font-size:11px; color:#8a560b; background:#fff7ea; border:1px solid #f0dfc8; border-radius:999px; padding:5px 8px; font-weight:800;}
+  .points{ list-style:none; display:grid; gap:7px; margin:8px 0 2px; }
+  .points li{ position:relative; padding-left:17px; font-size:13px; color:#4c3d30; line-height:1.48; }
+  .points li:before{ content:"•"; position:absolute; left:2px; top:-1px; color:var(--orange); font-size:18px; line-height:1; }
+  .day .from{ font-size:11px; color:var(--muted); margin-top:9px; line-height:1.4; background:#faf3e8; padding:7px 9px; border-radius:11px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .source-tag{ border:1px solid #efd9ba; background:#fff8ed; color:#8a560b; border-radius:999px; padding:5px 8px; font-size:11px; font-weight:800; cursor:pointer; max-width:100%; }
+  .source-tag:active{ transform:scale(.97); }
+  .card.focused,.day.focused{ outline:2px solid rgba(217,119,6,.65); box-shadow:0 0 0 5px rgba(217,119,6,.13), 0 8px 20px rgba(92,64,34,.06); }
+  .stream-panel{ padding:18px 2px 26px; }
+  .typing-bubble{ background:rgba(255,255,255,.88); border:1px solid rgba(232,222,210,.95); border-radius:22px; padding:15px; margin-bottom:13px; box-shadow:var(--shadow); }
+  .typing-bubble .who{ font-size:12px; color:var(--orange); font-weight:850; margin-bottom:8px; }
+  .typing-bubble .text{ font-size:14px; color:#4c3d30; line-height:1.58; min-height:44px; white-space:pre-line; }
+  .typing-bubble .cursor{ display:inline-block; width:7px; height:15px; margin-left:2px; background:var(--orange); vertical-align:-2px; animation:blink .9s steps(2,end) infinite; }
+  .skeleton-card{ background:var(--card); border:1px solid rgba(232,222,210,.95); border-radius:19px; padding:14px 15px; margin-bottom:11px; box-shadow:0 8px 22px rgba(92,64,34,.07); overflow:hidden; }
+  .sk-line{ height:10px; border-radius:999px; margin:9px 0; background:linear-gradient(90deg,#f3e7d7 0%,#fff7ea 45%,#f3e7d7 90%); background-size:220% 100%; animation:shimmer 1.1s linear infinite; }
+  .sk-line.short{ width:38%; } .sk-line.mid{ width:66%; } .sk-line.long{ width:92%; }
+  @keyframes blink{ 50%{ opacity:0; } }
+  @keyframes shimmer{ from{ background-position:120% 0; } to{ background-position:-120% 0; } }
+  .adjust { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:420px; background:rgba(255,253,248,.94); backdrop-filter:blur(18px); padding:12px 14px calc(12px + env(safe-area-inset-bottom)); display:flex; gap:8px; border-top:1px solid rgba(232,222,210,.95); z-index:25;}
+  .adjust input{ flex:1; background:#fff; border:1px solid var(--line); border-radius:999px; padding:12px 14px; color:var(--text); font-size:14px; outline:none;}
+  .adjust input:focus{border-color:rgba(217,119,6,.55); box-shadow:0 0 0 4px rgba(217,119,6,.10);}
+  .adjust button{ background:linear-gradient(135deg,var(--orange),var(--orange2)); border:none; color:#fff; border-radius:999px; padding:0 18px; font-weight:850; min-width:54px;}
+  .adjust button:disabled{background:#e8dccb; color:#9b8a78; box-shadow:none;}
+  .primary-cta{margin:14px 0 12px; display:flex; gap:9px;}
+  .primary-cta button{flex:1; border:none; border-radius:18px; padding:14px 12px; font-size:15px; font-weight:900; box-shadow:0 10px 24px rgba(217,119,6,.16);}
+  .primary-cta .start{background:linear-gradient(135deg,var(--orange),var(--orange2)); color:#fff;}
+  .primary-cta .save{background:#fff7ea; color:#8a560b; border:1px solid #efd9ba; box-shadow:0 8px 18px rgba(92,64,34,.08);}
+  .toast{position:fixed; left:50%; bottom:calc(132px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:55; max-width:360px; width:calc(100% - 44px); background:rgba(43,33,24,.90); color:#fff; border-radius:16px; padding:11px 13px; font-size:13px; line-height:1.42; box-shadow:0 16px 34px rgba(43,33,24,.22); display:none;}
+  .toast.show{display:block; animation:rise .2s ease both;}
+  .adjusted-badge{display:inline-flex; align-items:center; gap:5px; margin:0 0 10px; padding:7px 10px; border-radius:999px; background:#ecfdf3; border:1px solid #bbf7d0; color:#16703a; font-size:12px; font-weight:850;}
+  .day.adjusted-highlight{border-color:rgba(34,197,94,.45); box-shadow:0 10px 24px rgba(34,197,94,.10);}
+  .loading{ text-align:center; color:var(--muted); padding:42px 24px; font-size:14px; line-height:1.7;}
+  .loading:before{content:""; display:block; width:36px; height:36px; margin:0 auto 14px; border-radius:50%; border:3px solid #efdcc2; border-top-color:var(--orange); animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .hero { background:linear-gradient(180deg,#fffdf8,#fff7ea); border:1px solid rgba(232,222,210,.95); border-radius:24px; padding:18px 16px; margin:8px 0 14px; box-shadow:var(--shadow); overflow:hidden; position:relative; }
+  .hero:after{content:""; position:absolute; width:160px; height:160px; right:-72px; top:-80px; border-radius:50%; background:rgba(245,158,11,.16); filter:blur(2px);}
+  .eyebrow{font-size:11px; color:var(--orange); font-weight:850; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px;}
+  .hero-title{font-size:23px; line-height:1.12; letter-spacing:-.055em; font-weight:900; max-width:280px;}
+  .hero-copy{font-size:12px; line-height:1.55; color:var(--muted); margin-top:9px; max-width:310px;}
+  .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; position:relative; z-index:1;}
+  .stat{background:rgba(255,255,255,.68); border:1px solid rgba(232,222,210,.85); border-radius:16px; padding:10px 9px;}
+  .stat strong{display:block; font-size:18px; letter-spacing:-.04em; color:var(--text);}
+  .stat span{font-size:10px; color:var(--muted); white-space:nowrap;}
+  .scan-panel{background:#fffdf8; border:1px solid rgba(232,222,210,.95); border-radius:22px; padding:14px; margin-bottom:14px; box-shadow:0 8px 22px rgba(92,64,34,.06);}
+  .scan-title{font-size:13px; font-weight:850; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;}
+  .scan-title span{font-size:11px; color:var(--orange); background:#fff3df; border:1px solid #f2dfc4; border-radius:999px; padding:4px 8px;}
+  .scan-row{display:flex; gap:8px; align-items:center; font-size:12px; color:#594838; padding:7px 0; border-top:1px solid rgba(232,222,210,.5);}
+  .scan-row:first-of-type{border-top:0;}
+  .scan-dot{width:7px; height:7px; border-radius:999px; background:var(--orange); box-shadow:0 0 0 4px rgba(217,119,6,.12); flex:none;}
+  .intent-card{background:linear-gradient(180deg,#fffaf1,#fff); border:1px solid rgba(245,158,11,.38); border-radius:20px; padding:14px; margin-bottom:14px; box-shadow:0 10px 24px rgba(217,119,6,.10);}
+  .intent-top{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;}
+  .intent-name{font-size:16px; font-weight:900; letter-spacing:-.03em;}
+  .heat{font-size:12px; font-weight:900; color:#fff; background:linear-gradient(135deg,var(--orange),var(--orange2)); padding:6px 9px; border-radius:999px; box-shadow:0 6px 16px rgba(217,119,6,.18);}
+  .heatbar{height:8px; border-radius:999px; background:#f0e3d2; overflow:hidden; margin:9px 0 10px;}
+  .heatbar i{display:block; height:100%; width:var(--w); background:linear-gradient(90deg,var(--orange),var(--orange2)); border-radius:inherit;}
+  .intent-motive{font-size:12px; color:#5c4a39; line-height:1.5; background:#fff7ea; border:1px solid #f0dfc8; padding:9px 10px; border-radius:14px;}
+  .phone-note{font-size:11px; color:var(--muted); margin-bottom:9px; display:flex; justify-content:space-between; padding:0 3px;}
+  .plan-section{margin-top:10px;}
+  .plan-label{font-size:11px; color:var(--orange); font-weight:850; margin:10px 0 5px;}
+  .chips{display:flex; flex-wrap:wrap; gap:6px;}
+  .chip{font-size:11px; color:#5b4938; background:#fff7ea; border:1px solid #f0dfc8; border-radius:999px; padding:6px 8px;}
+  .output{font-size:12px; color:#3f3228; line-height:1.45; background:#f9efe0; border:1px solid #eddec8; border-radius:13px; padding:9px 10px; margin-top:7px; font-weight:650;}
+  .quick-adjust{position:fixed; bottom:calc(74px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:100%; max-width:420px; padding:0 14px; z-index:24; display:flex; justify-content:flex-start; pointer-events:none;}
+  .quick-adjust button{pointer-events:auto; border:1px solid #efd9ba; background:#fff8ed; color:#8a560b; border-radius:999px; padding:8px 11px; font-size:12px; font-weight:800; box-shadow:0 6px 14px rgba(92,64,34,.08);}
+  .demo-control{position:fixed; top:calc(12px + env(safe-area-inset-top)); right:50%; transform:translateX(198px); z-index:40; display:flex; flex-direction:column; align-items:flex-end; gap:7px; pointer-events:none;}
+  .demo-control button{pointer-events:auto; border:1px solid rgba(239,217,186,.95); background:rgba(255,248,237,.94); color:#8a560b; border-radius:999px; padding:8px 11px; font-size:11px; font-weight:900; box-shadow:0 8px 20px rgba(92,64,34,.12); backdrop-filter:blur(14px);}
+  .demo-control button.running{background:linear-gradient(135deg,var(--orange),var(--orange2)); color:#fff; border-color:transparent;}
+  .demo-status{display:none; max-width:238px; text-align:right; background:rgba(43,33,24,.82); color:#fff; border-radius:14px; padding:8px 10px; font-size:11px; line-height:1.35; box-shadow:0 10px 24px rgba(43,33,24,.18); backdrop-filter:blur(14px);}
+  .demo-status.show{display:block; animation:rise .2s ease both;}
+  .qr-mask{position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center; padding:22px; background:rgba(43,33,24,.38); backdrop-filter:blur(10px);}
+  .qr-mask.show{display:flex; animation:fadeIn .18s ease both;}
+  .qr-card{width:min(320px,92vw); background:#fffaf1; border:1px solid #efd9ba; border-radius:26px; padding:18px; box-shadow:0 26px 70px rgba(43,33,24,.24); color:var(--text); transition:width .22s ease, padding .22s ease, border-radius .22s ease;}
+  .qr-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px;}
+  .qr-title{font-size:17px; font-weight:950; letter-spacing:-.04em;}
+  .qr-sub{font-size:12px; color:var(--muted); line-height:1.45; margin-top:4px;}
+  .qr-close{border:0; background:#f4e6d2; color:#7b4b0a; width:30px; height:30px; border-radius:999px; font-weight:950; font-size:18px; line-height:30px;}
+  .qr-box{background:#fff; border:1px solid #efe2cf; border-radius:22px; padding:14px; display:flex; justify-content:center; box-shadow:inset 0 0 0 6px #fffaf4; transition:padding .22s ease, border-radius .22s ease;}
+  #qrImage{width:208px; height:208px; image-rendering:pixelated; display:block; transition:width .22s ease, height .22s ease;}
+  .qr-url{margin:12px 0 10px; padding:9px 10px; border-radius:14px; background:#fff3df; border:1px solid #f1ddbf; color:#6f4a19; font-size:11px; line-height:1.35; word-break:break-all;}
+  .qr-actions{display:flex; gap:8px; flex-wrap:wrap;}
+  .qr-actions button{flex:1 1 30%; border:1px solid #ead2ad; background:#fff8ed; color:#8a560b; border-radius:14px; padding:10px 9px; font-size:12px; font-weight:900;}
+  .qr-actions .primary{background:linear-gradient(135deg,var(--orange),var(--orange2)); color:#fff; border-color:transparent;}
+  .qr-mask.fullscreen{padding:18px; background:radial-gradient(circle at top,#fff4df 0,#f4dfbf 34%,#2b2118 120%);}
+  .qr-mask.fullscreen .qr-card{width:min(620px,96vw); min-height:min(760px,92vh); border-radius:34px; padding:24px; display:flex; flex-direction:column; justify-content:center;}
+  .qr-mask.fullscreen .qr-title{font-size:28px; text-align:center;}
+  .qr-mask.fullscreen .qr-sub{text-align:center; font-size:15px;}
+  .qr-mask.fullscreen .qr-head{justify-content:center; position:relative;}
+  .qr-mask.fullscreen .qr-close{position:absolute; right:0; top:0; width:38px; height:38px; line-height:38px; font-size:22px;}
+  .qr-mask.fullscreen .qr-box{padding:22px; border-radius:30px; margin-top:8px;}
+  .qr-mask.fullscreen #qrImage{width:min(420px,78vw,58vh); height:min(420px,78vw,58vh);}
+  .qr-mask.fullscreen .qr-url{text-align:center; font-size:16px; padding:13px 14px; margin:16px 0 14px;}
+  .qr-mask.fullscreen .qr-actions button{font-size:15px; padding:13px 12px;}
+  .state-card{background:var(--card); border:1px solid rgba(232,222,210,.95); border-radius:24px; padding:18px 16px; margin:8px 0 14px; box-shadow:var(--shadow);}
+  .state-emoji{width:54px; height:54px; border-radius:18px; display:flex; align-items:center; justify-content:center; background:#fff3df; font-size:26px; margin-bottom:12px;}
+  .state-title{font-size:22px; line-height:1.18; letter-spacing:-.045em; font-weight:950; margin-bottom:8px;}
+  .state-copy{font-size:13px; color:var(--muted); line-height:1.58; margin-bottom:13px;}
+  .state-actions{display:flex; gap:9px; flex-wrap:wrap;}
+  .state-actions button{flex:1 1 44%; border:none; border-radius:16px; padding:12px 10px; font-size:13px; font-weight:900;}
+  .state-actions .primary{background:linear-gradient(135deg,var(--orange),var(--orange2)); color:#fff; box-shadow:0 8px 18px rgba(217,119,6,.18);}
+  .state-actions .ghost{background:#fff7ea; color:#8a560b; border:1px solid #efd9ba;}
+  .progress-head{background:linear-gradient(180deg,#fffdf8,#fff7ea); border:1px solid rgba(232,222,210,.95); border-radius:24px; padding:16px; margin:8px 0 12px; box-shadow:var(--shadow);}
+  .progress-title{font-size:21px; font-weight:950; letter-spacing:-.045em; margin-bottom:7px;}
+  .progress-copy{font-size:12px; color:var(--muted); line-height:1.55;}
+  .progress-bar{height:10px; border-radius:999px; background:#f0e3d2; overflow:hidden; margin-top:13px;}
+  .progress-bar i{display:block; height:100%; width:var(--progress,0%); background:linear-gradient(90deg,var(--orange),var(--orange2)); border-radius:inherit; transition:width .18s ease;}
+  .task-list{display:grid; gap:10px; margin-top:10px;}
+  .task-row{background:var(--card); border:1px solid rgba(232,222,210,.95); border-radius:18px; padding:12px 13px; display:flex; gap:10px; align-items:flex-start; box-shadow:0 8px 20px rgba(92,64,34,.06);}
+  .task-row input{width:20px; height:20px; accent-color:var(--orange); margin-top:1px; flex:none;}
+  .task-row b{display:block; font-size:13px; color:#3f3024; margin-bottom:3px;}
+  .task-row span{display:block; font-size:12px; color:var(--muted); line-height:1.42;}
+  .task-row.done{background:#fffaf1; border-color:#efd9ba;}
+  .task-row.done b{text-decoration:line-through; color:#8a6b48;}
+  .mini-demo-row{display:flex; gap:6px; pointer-events:auto;}
+  .mini-demo-row button{font-size:10px; padding:7px 8px;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @media (max-width:430px){ .demo-control{right:10px; transform:none;} }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar"><h1>用得上 <span>· 把收藏变成行动</span></h1><div class="sub" id="subtitle">把刷过的好内容，真正用上</div></div>
+
+  <!-- 视图1：收藏夹 -->
+  <div class="view active" id="view-collections"></div>
+
+  <!-- 视图2：搭子升温信号 -->
+  <div class="view signal-wrap" id="view-signal"></div>
+
+  <!-- 视图3：生成可执行计划 -->
+  <div class="view" id="view-deliverable"></div>
+
+  <!-- 视图4：执行进度 / 完整状态 -->
+  <div class="view" id="view-progress"></div>
+
+  <!-- 录屏/路演控制：不影响手动体验 -->
+  <div class="demo-control" id="demoControl">
+    <button id="demoBtn" onclick="runAutoDemo()">▶ 自动演示</button>
+    <button id="shareBtn" onclick="openQrShare()">📱 扫码打开</button>
+    <div class="mini-demo-row">
+      <button onclick="renderEmptyState()">空状态</button>
+      <button onclick="renderFailureState()">失败态</button>
+    </div>
+    <div class="demo-status" id="demoStatus">准备开始</div>
+  </div>
+</div>
+
+<div class="qr-mask" id="qrMask" onclick="closeQrShare(event)">
+  <div class="qr-card" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+    <div class="qr-head">
+      <div>
+        <div class="qr-title" id="qrTitle">扫码打开产品 Demo</div>
+        <div class="qr-sub">手机和电脑连同一个 Wi‑Fi，扫这个码进入 H5。</div>
+      </div>
+      <button class="qr-close" onclick="closeQrShare()" aria-label="关闭二维码">×</button>
+    </div>
+    <div class="qr-box"><img id="qrImage" alt="手机扫码打开产品 Demo 的二维码" /></div>
+    <div class="qr-url" id="qrUrlText"></div>
+    <div class="qr-actions">
+      <button class="primary" onclick="copyShareLink()">复制链接</button>
+      <button id="qrFullscreenBtn" onclick="toggleQrFullscreen()">全屏放大</button>
+      <button onclick="closeQrShare()">继续演示</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== 前端数据协议 + Demo 数据源 =====================
+给 AI 核心 / API 组员的对接约定：
+1. 前端只需要一个 ShiguangPayload JSON，不需要后端懂 UI。
+2. 真实接口来不及时，DEMO_DATA 会保证 H5 离线可演示。
+3. 如果接真实接口，只要把 window.SHIGUANG_API_PAYLOAD 或 loadApiData() 的返回值做成下面结构即可。
+
+ShiguangPayload = {
+  favorites: FavoriteItem[],
+  signal: IntentSignal,
+  plans: {
+    main: DeliverablePlan,
+    adjusted: DeliverablePlan
+  }
+}
+
+FavoriteItem = {
+  id: string,
+  icon: string,
+  title: string,
+  cat: string,
+  saved: string,
+  motivation: string,
+  callback?: string
+}
+
+IntentSignal = {
+  cat: string,
+  count: number,
+  heat: number,
+  motivation: string,
+  msg: string,
+  evidence: string
+}
+
+DeliverablePlan = {
+  title: string,
+  based_on: string,
+  days: Array<{
+    d?: string, day?: string,
+    th?: string, theme?: string,
+    goal: string,
+    videos: string[],
+    key_points?: string[], points?: string[],
+    template: string,
+    output: string,
+    from: string
+  }>
+}
+*/
+const DEMO_DATA = {
+  favorites: [
+    {id:'v001',icon:'帐',title:'新手帐篷怎么选',cat:'周末露营',saved:'05-18',motivation:'想买顶帐篷但挑花眼',callback:'你 5/18 存它，是想搞懂帐篷到底怎么挑',key_points:['3-4 人选「一室一厅」隧道帐够用','认准防水值 ≥2000mm','黑胶涂层挡晒、午睡不闷']},
+    {id:'v002',icon:'备',title:'露营必带装备清单',cat:'周末露营',saved:'05-19',motivation:'怕到了才发现少带东西',key_points:['天幕+地钉+橡皮锤是铁三角','照明分主灯+氛围灯两层','防潮垫必带、夜里返潮']},
+    {id:'v003',icon:'营',title:'小众宝藏营地推荐',cat:'周末露营',saved:'05-20',motivation:'想找个人少的好营地',key_points:['这个水库营地要提前 3 天预约','优先能开车到 + 有卫生间','背风、离水源 20 米更安全']},
+    {id:'v004',icon:'食',title:'露营菜单：懒人也能整',cat:'周末露营',saved:'05-21',motivation:'露营吃啥不想太麻烦',key_points:['出发前腌好肉、到场直接烤','一锅焖饭省去洗碗','保温箱加冰袋放生鲜']},
+    {id:'v005',icon:'幕',title:'天幕怎么搭不塌不漏雨',cat:'周末露营',saved:'05-22',motivation:'上次天幕被风吹塌了',key_points:['迎风面压低、背风面抬高','地钉 45° 反向打牢','下雨把天幕一角放斜导流']},
+    {id:'v006',icon:'氛',title:'氛围感露营布置',cat:'周末露营',saved:'05-23',motivation:'想拍出好看的露营照',key_points:['暖光串灯比白光出片','低矮折叠桌椅更松弛','米色 + 原木色调统一']},
+    {id:'v007',icon:'收',title:'露营装备打包收纳',cat:'周末露营',saved:'05-24',motivation:'后备箱总塞不下',key_points:['重的沉的垫最底层','按到场使用顺序反向装','收纳箱比塑料袋好叠摞']},
+    {id:'v008',icon:'坑',title:'第一次露营避坑指南',cat:'周末露营',saved:'05-25',motivation:'怕第一次手忙脚乱',key_points:['别正午顶大太阳扎营','垃圾全带走、不留营地','查天气、6 级风以上别去']},
+    {id:'v201',icon:'趣',title:'沙雕动物合集',cat:'随手乐',saved:'05-10',motivation:''},
+    {id:'v202',icon:'搭',title:'显瘦穿搭公式',cat:'随手乐',saved:'05-12',motivation:''},
+  ],
+  signal: {
+    cat:'周末露营', count:8, heat:94,
+    motivation:'想趁初夏找个周末出去露营，逃离城市、放空两天。',
+    msg:'你这周连存了 8 条露营攻略——帐篷怎么选、营地、露营菜单、天幕都收了，看来真想出去玩一趟了。要我帮你整合成一个【两天一夜露营计划 + 装备打包清单】吗？从行前买啥订啥，到现场怎么搭、吃啥都给你排好。',
+    evidence:'依据：近 7 天集中收藏 8 条露营相关，意图明显升温'
+  },
+  plans: {
+    main: {
+      title:'两天一夜露营计划 + 装备清单',
+      based_on:'我从你收藏里挑出这 8 条露营攻略——帐篷、营地、菜单、天幕、布置、收纳都用上了；沙雕动物、穿搭这些跟露营无关的先跳过了。',
+      days:[
+        {d:'Day 1',th:'行前一天 · 备齐装备 + 订好营地 · 约 2 小时',goal:'出发前把该买、该订的搞定，别到现场抓瞎。',videos:['新手帐篷怎么选','小众宝藏营地推荐','露营必带装备清单'],key_points:['按「装备 / 食材 / 氛围」三类列打包清单','帐篷选防水值 ≥2000mm 的隧道帐','宝藏营地提前 3 天预约、确认能开车到'],template:'清单法：装备 → 食材 → 氛围，逐项打勾',output:'一张三类打包清单 + 一个订好的营地',from:'出自你存的「新手帐篷怎么选」「小众宝藏营地推荐」「露营必带装备清单」'},
+        {d:'Day 2',th:'第一天 · 到场扎营 + 搭天幕 + 露营晚餐 · 玩一整天',goal:'天黑前把营地搭好，晚上整顿露营烧烤。',videos:['天幕怎么搭不塌不漏雨','露营菜单：懒人也能整','氛围感露营布置'],key_points:['天幕迎风面压低、地钉 45° 反向打牢','出发前腌好的肉到场直接上烤架','暖光串灯一拉，氛围和出片都有了'],template:'到场顺序：选平地 → 搭帐 → 支天幕 → 布置 → 开火',output:'搭好的营地 + 一顿露营晚餐 + 一组氛围照',from:'出自你存的「天幕怎么搭不塌不漏雨」「露营菜单：懒人也能整」「氛围感露营布置」'},
+        {d:'Day 3',th:'第二天 · 睡到自然醒 + 收拾返程 · 约半天',goal:'轻松收尾，把营地恢复原样、东西收好带走。',videos:['露营装备打包收纳','第一次露营避坑指南'],key_points:['趁太阳把帐篷晒干再叠、防发霉','按到场反顺序收纳、重物垫底','垃圾全部带走、不留痕迹'],template:'撤营顺序：收氛围 → 灭火 → 拆帐 → 晒干 → 装箱',output:'恢复原样的营地 + 装得下的后备箱',from:'出自你存的「露营装备打包收纳」「第一次露营避坑指南」'},
+      ]
+    },
+    adjusted: {
+      title:'已精简 · 轻松露营版',
+      based_on:'根据你的调整，砍掉折腾的部分，只留最省心、最出片的安排。',
+      days:[
+        {d:'Day 1',th:'行前 · 只买必需 + 订营地 · 约 1 小时',goal:'保持不变：把营地订了、必需装备备齐就行。',videos:['小众宝藏营地推荐','露营必带装备清单'],key_points:['能租就租、少买大件','只列必需：帐篷 / 天幕 / 照明 / 食材','营地提前预约、确认能开车到'],template:'只备必需，不囤装备。',output:'订好的营地 + 一份精简装备清单',from:'继续用「小众宝藏营地推荐」「露营必带装备清单」'},
+        {d:'Day 2',th:'第一天 · 轻装扎营 + 简单露营餐',goal:'保持不变：搭好天幕帐篷，吃顿省事的。',videos:['天幕怎么搭不塌不漏雨','露营菜单：懒人也能整'],key_points:['优先搭天幕，遮阳又挡雨','吃半成品 / 预制菜，少洗碗','串灯一拉就有氛围'],template:'省事优先，不追求满桌。',output:'搭好的营地 + 一顿省事露营餐',from:'继续用「天幕怎么搭不塌不漏雨」「露营菜单：懒人也能整」'},
+        {d:'Day 3',th:'第二天 · 只做 3 件最省心的收尾',goal:'把返程压成最轻松的三步。',videos:['第一次露营避坑指南','露营装备打包收纳'],key_points:['帐篷晒干再收、防发霉','垃圾全部带走','重物垫底、按反顺序装箱'],template:'砍掉所有折腾，只做必要收尾。',output:'① 帐篷晒干再收；② 垃圾全带走；③ 反顺序装箱走人。',from:'精简自「第一次露营避坑指南」「露营装备打包收纳」'},
+      ]
+    }
+  }
+};
+
+let appData = normalizePayload(loadDemoData());
+
+function loadDemoData(){
+  return DEMO_DATA;
+}
+
+async function loadApiData(){
+  // 可选对接点：其他组员如果在页面加载前写入 window.SHIGUANG_API_PAYLOAD，前端会直接吃这份数据。
+  // 也可以在这里 fetch('/api/shiguang-demo')，但黑客松现场默认不依赖后端。
+  return window.SHIGUANG_API_PAYLOAD || null;
+}
+
+function normalizePayload(payload){
+  const source = payload || DEMO_DATA;
+  return {
+    favorites: Array.isArray(source.favorites) ? source.favorites.map(normalizeFavoriteItem) : [],
+    signal: normalizeIntentSignal(source.signal || {}),
+    plans: {
+      main: normalizePlanData(source.plans && source.plans.main),
+      adjusted: normalizePlanData(source.plans && source.plans.adjusted)
+    }
+  };
+}
+
+function normalizeFavoriteItem(item){
+  return {
+    id: String(item.id || crypto.randomUUID?.() || Math.random().toString(36).slice(2)),
+    icon: item.icon || '收',
+    title: item.title || '未命名收藏',
+    cat: item.cat || item.category || '未分类',
+    saved: item.saved || item.saved_at || '刚刚',
+    motivation: item.motivation || item.reason || '',
+    callback: item.callback || '',
+    key_points: Array.isArray(item.key_points) ? item.key_points : []   // 透传"视频独有干货"喂给 Prompt
+  };
+}
+
+function normalizeIntentSignal(signal){
+  return {
+    cat: signal.cat || signal.category || '周末露营',
+    count: Number(signal.count || 0),
+    heat: Math.max(0, Math.min(100, Number(signal.heat || 0))),
+    motivation: signal.motivation || '信息缺失：缺少收藏动机。',
+    msg: signal.msg || signal.message || '信息缺失：缺少搭子提醒文案。',
+    evidence: signal.evidence || '信息缺失：缺少判断依据。'
+  };
+}
+
+function normalizePlanData(plan){
+  const fallback = DEMO_DATA.plans.main;
+  const src = plan || fallback;
+  return {
+    title: src.title || '用得上的计划',
+    based_on: src.based_on || src.basedOn || '信息缺失：缺少来源说明。',
+    days: Array.isArray(src.days) ? src.days.map(normalizePlanDay) : fallback.days.map(normalizePlanDay)
+  };
+}
+
+function normalizePlanDay(day){
+  return {
+    d: day.d || day.day || 'Day ?',
+    th: day.th || day.theme || '今日任务',
+    goal: day.goal || day.task || '信息缺失：缺少目标。',
+    videos: Array.isArray(day.videos) ? day.videos : [],
+    key_points: Array.isArray(day.key_points) ? day.key_points : (Array.isArray(day.points) ? day.points : []),
+    template: day.template || '',
+    output: day.output || '',
+    from: day.from || '出处：收藏夹'
+  };
+}
+
+function getFavorites(){ return appData.favorites; }
+function getIntentSignal(){ return appData.signal; }
+function getMainPlan(){ return appData.plans.main; }
+function getAdjustedPlan(){ return appData.plans.adjusted; }
+function getFavoritesByCategory(cat){ return getFavorites().filter(item => item.cat === cat); }
+
+/* ===================== 渲染 ===================== */
+function show(id){ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0,0); }
+
+function renderCollections(awakened){
+  const HOT_CAT = getIntentSignal().cat;  // 升温分类跟着信号走，换场景不写死
+  const groups = {}; getFavorites().forEach(it=>{ (groups[it.cat]=groups[it.cat]||[]).push(it); });
+  // 唤醒后，把"升温"组排最前并高亮
+  const order = awakened ? [HOT_CAT,...Object.keys(groups).filter(c=>c!==HOT_CAT)] : Object.keys(groups);
+  let html = `
+    <section class="hero">
+      <div class="eyebrow">DORMANT FAVORITES</div>
+      <div class="hero-title">你收藏的“以后有用”，不该继续吃灰。</div>
+      <div class="hero-copy">用得上会把收藏瞬间的动机叫回来：不是让你再刷一遍视频，而是直接把它们拧成今天能执行的计划。</div>
+      <div class="stats">
+        <div class="stat"><strong>999</strong><span>条沉睡收藏</span></div>
+        <div class="stat"><strong>32天</strong><span>没认真打开</span></div>
+        <div class="stat"><strong>87%</strong><span>没有被使用</span></div>
+      </div>
+    </section>`;
+  order.forEach(cat=>{
+    const hot = awakened && cat===HOT_CAT;
+    html += `<div class="group-title ${hot?'hot':''}">${hot?'升温中 · ':''}${cat}（${groups[cat].length}）</div>`;
+    groups[cat].forEach(it=>{
+      html += `<div class="card ${hot?'hot-card':''}" id="item-${it.id}"><div class="thumb">${it.icon}</div><div class="meta">
+        <div class="t">${it.title}</div><div class="m">${it.saved} 收藏</div>
+        ${awakened&&it.motivation?`<div class="why">当时想 · ${it.motivation}</div>`:''}
+      </div></div>`;
+    });
+  });
+  document.getElementById('view-collections').innerHTML = html +
+    `<button class="fab" onclick="${awakened?"goSignal()":"awaken()"}">${awakened?'查看搭子的提醒 →':'唤醒我的收藏夹'}</button>`;
+}
+
+let awakened=false;
+function awaken(){ awakened=true; document.getElementById('subtitle').textContent='已读懂你的收藏，识别出 1 个升温意图'; renderCollections(true); }
+function goSignal(){
+  document.getElementById('view-signal').innerHTML = `
+    <div class="scan-panel">
+      <div class="scan-title">AI 正在唤醒收藏夹 <span>5/5 完成</span></div>
+      <div class="scan-row"><i class="scan-dot"></i>正在读取视频画面和标题...</div>
+      <div class="scan-row"><i class="scan-dot"></i>正在理解讲解内容...</div>
+      <div class="scan-row"><i class="scan-dot"></i>正在捕捉你当时为什么收藏...</div>
+      <div class="scan-row"><i class="scan-dot"></i>正在聚类沉睡意图...</div>
+      <div class="scan-row"><i class="scan-dot"></i>找到最近升温任务：${getIntentSignal().cat}</div>
+    </div>
+    <div class="intent-card">
+      <div class="intent-top"><div class="intent-name">🔥 ${getIntentSignal().cat}</div><div class="heat">升温 ${getIntentSignal().heat}%</div></div>
+      <div class="heatbar"><i style="--w:${getIntentSignal().heat}%"></i></div>
+      <div class="intent-motive">当时为什么存：${getIntentSignal().motivation}</div>
+    </div>
+    <div class="phone-note"><span>今天 10:24</span><span>用得上通知</span></div>
+    <div class="bubble">
+      <div class="who">🤝 用得上助手</div>
+      <div class="msg">${getIntentSignal().msg}</div>
+      <div class="ev">${getIntentSignal().evidence}</div>
+      <div class="actions">
+        <button class="btn-ghost" onclick="show('view-collections')">以后再说</button>
+        <button class="btn-primary" onclick="goDeliver()">生成计划</button>
+      </div>
+    </div>`;
+  show('view-signal');
+}
+
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function findItemBySourceName(name){
+  const normalized = String(name || '').replace(/\s+/g,'');
+  return getFavorites().find(it => {
+    const title = it.title.replace(/\s+/g,'');
+    return title.includes(normalized) || normalized.includes(title) || title.slice(0,6) === normalized.slice(0,6);
+  });
+}
+function renderSourceTags(fromText){
+  const names = [...String(fromText || '').matchAll(/「([^」]+)」/g)].map(m=>m[1]);
+  if(!names.length) return escapeHtml(fromText || '出处：收藏夹');
+  return '出处：' + names.map(name => {
+    const item = findItemBySourceName(name);
+    const target = item ? item.id : '';
+    return `<button class="source-tag" type="button" onclick="jumpToCollection('${target}')">${escapeHtml(name)}</button>`;
+  }).join('');
+}
+function jumpToCollection(itemId){
+  awakened = true;
+  document.getElementById('subtitle').textContent='已读懂你的收藏，识别出 1 个升温意图';
+  renderCollections(true);
+  show('view-collections');
+  requestAnimationFrame(()=>{
+    const el = document.getElementById('item-'+itemId);
+    if(!el) return;
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.classList.add('focused');
+    setTimeout(()=>el.classList.remove('focused'), 1600);
+  });
+}
+function renderPoints(day){
+  const points = Array.isArray(day.points) && day.points.length
+    ? day.points
+    : (Array.isArray(day.key_points) && day.key_points.length ? day.key_points : []);
+  if(points.length){
+    return `<ul class="points">${points.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ul>`;
+  }
+  return `<div class="task">${escapeHtml(day.task || day.goal || '')}</div>`;
+}
+function getPlanOverview(plan){
+  return (plan.days || []).slice(0,3).map((day, idx)=>`
+    <button class="overview-chip" type="button" onclick="jumpToDay(${idx+1})">
+      <b>${escapeHtml(day.d || day.day || `Day ${idx+1}`)}</b>
+      <span>${escapeHtml(day.th || day.theme || '今日任务')}</span>
+    </button>`).join('');
+}
+function renderWhyCard(plan, isAdjusted){
+  const signal = getIntentSignal();
+  const copy = isAdjusted
+    ? '你不是要更多内容，而是要别太折腾。用得上保留最省心、最出片的部分，砍掉费时费力的低收益动作。'
+    : '用得上不是让你重刷收藏，而是把最近升温的同类收藏聚成一件能落地的事：先把要紧的定下来，再把每天的安排压成能照做的清单。';
+  return `
+    <div class="why-card">
+      <div class="why-title">为什么这样安排</div>
+      <div class="why-copy">${escapeHtml(copy)}</div>
+      <div class="why-metrics">
+        <span>${escapeHtml(signal.cat)} · ${escapeHtml(signal.count)} 条</span>
+        <span>升温 ${escapeHtml(signal.heat)}%</span>
+        <span>${isAdjusted ? '已按反馈精简' : '两天一夜可执行'}</span>
+      </div>
+    </div>`;
+}
+function jumpToDay(dayNumber){
+  const day = document.getElementById('day-'+dayNumber);
+  if(!day) return;
+  day.scrollIntoView({behavior:'smooth', block:'center'});
+  day.classList.add('focused');
+  setTimeout(()=>day.classList.remove('focused'), 1600);
+}
+function renderGeneratingState(label='正在把你的 8 条露营攻略，拧成两天一夜…'){
+  document.getElementById('subtitle').textContent = '正在生成用得上的计划';
+  document.getElementById('view-deliverable').innerHTML = `
+    <div class="stream-panel">
+      <div class="typing-bubble">
+        <div class="who">🤝 用得上正在整合</div>
+        <div class="text" id="streamText">${escapeHtml(label)}<span class="cursor"></span></div>
+      </div>
+      <div class="skeleton-card"><div class="sk-line short"></div><div class="sk-line long"></div><div class="sk-line mid"></div></div>
+      <div class="skeleton-card"><div class="sk-line short"></div><div class="sk-line long"></div><div class="sk-line mid"></div></div>
+      <div class="skeleton-card"><div class="sk-line short"></div><div class="sk-line long"></div><div class="sk-line mid"></div></div>
+    </div>`;
+  show('view-deliverable');
+}
+function setStreamText(text){
+  const el = document.getElementById('streamText');
+  if(!el) return;
+  el.innerHTML = `${escapeHtml(text)}<span class="cursor"></span>`;
+}
+async function simulateTyping(label){
+  const text = label || '我看到了 8 条露营攻略，正在帮你排成能照做的两天一夜计划。';
+  let acc = '';
+  for(const ch of text){
+    acc += ch;
+    setStreamText(acc);
+    await new Promise(r=>setTimeout(r, 18));
+  }
+}
+function renderPlan(plan, options={}){
+  document.getElementById('subtitle').textContent = options.adjusted ? '已根据反馈调整计划' : '8 条收藏，拧成两天一夜露营计划';
+  const isAdjusted = !!options.adjusted;
+  const chipList = arr => (arr||[]).map(v=>`<span class="chip">${escapeHtml(v)}</span>`).join('');
+  let days = plan.days.map((x, idx)=>`
+    <div class="day ${isAdjusted && idx===2 ? 'adjusted-highlight' : ''}" id="day-${idx+1}">
+      <div class="d">${escapeHtml(x.d || x.day)}</div>
+      <div class="th">${escapeHtml(x.th || x.theme)}</div>
+      ${x.output?`<div class="day-output-top"><span>今日产出</span>${escapeHtml(x.output)}</div>`:''}
+      ${x.goal?`<div class="task"><b>目标：</b>${escapeHtml(x.goal)}</div>`:''}
+      <details>
+        <summary>展开执行细节</summary>
+        ${renderPoints(x)}
+        ${x.videos?`<div class="plan-section"><div class="plan-label">要看的收藏</div><div class="chips">${chipList(x.videos)}</div></div>`:''}
+        ${x.template?`<div class="plan-section"><div class="plan-label">答题/执行模板</div><div class="task">${escapeHtml(x.template)}</div></div>`:''}
+        <div class="from">${renderSourceTags(x.from)}</div>
+      </details>
+    </div>`).join('');
+  document.getElementById('view-deliverable').innerHTML = `
+    <div class="deliv-head"><div class="title">${escapeHtml(plan.title)}</div><div class="based">${escapeHtml(plan.based_on)}</div></div>
+    ${options.real ? '<div class="adjusted-badge" style="background:#fff3df;border-color:#f0dfc8;color:#8a560b;">✨ 刚刚为你实时生成</div>' : ''}
+    ${isAdjusted ? '<div class="adjusted-badge">✓ 已按反馈精简</div>' : ''}
+    <div class="primary-cta">
+      <button class="start" onclick="startDayOne()">开始 Day 1</button>
+      <button class="save" onclick="savePlanDemo()">保存计划</button>
+    </div>
+    <div class="plan-overview">${getPlanOverview(plan)}</div>
+    ${renderWhyCard(plan, isAdjusted)}
+    ${days}
+    <div class="quick-adjust"><button onclick="quickAdjust()">想轻松点，帮我精简</button></div>
+    <div class="adjust">
+      <input id="adjustInput" placeholder="想调整？比如：今天任务太多" oninput="updateAdjustButton()" onkeydown="handleAdjustKey(event)" />
+      <button id="adjustBtn" onclick="doAdjust()" disabled>调整</button>
+    </div>
+    <div class="toast" id="toast"></div>`;
+  show('view-deliverable');
+  updateAdjustButton();
+}
+function getCurrentView(){ return (document.querySelector('.view.active')||{}).id || ''; }
+async function goDeliver(){
+  renderGeneratingState('正在把你的 8 条露营攻略，拧成两天一夜…');
+  const typing = simulateTyping();
+  await typing;
+  if(__planCache['__main__']){ renderPlan(__planCache['__main__'], {real:true}); return; }  // 预热已命中：直接秒出真·实时生成
+  const fb = getMainPlan();
+  renderPlan(fb);                                  // 缓存没命中：先秒出兜底，绝不白屏
+  const real = await callLLM(null);                // 后台真实生成（超时给足，约 35s）
+  if(real && real !== fb && getCurrentView()==='view-deliverable'){
+    renderPlan(real, {real:true});                 // 真功夫好了，平滑替换上来
+    showToast('✨ 刚刚为你实时生成的版本已更新');
+  }
+}
+function showToast(text){
+  const el = document.getElementById('toast');
+  if(!el){ setDemoStatus(text); return; }
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+function updateAdjustButton(){
+  const input = document.getElementById('adjustInput');
+  const btn = document.getElementById('adjustBtn');
+  if(!input || !btn) return;
+  const hasValue = input.value.trim().length > 0;
+  btn.disabled = !hasValue || btn.dataset.loading === '1';
+}
+function setAdjustLoading(loading){
+  const btn = document.getElementById('adjustBtn');
+  const input = document.getElementById('adjustInput');
+  if(!btn) return;
+  btn.dataset.loading = loading ? '1' : '0';
+  btn.textContent = loading ? '生成中…' : '调整';
+  if(input) input.disabled = !!loading;
+  updateAdjustButton();
+}
+function handleAdjustKey(event){
+  if(event.key === 'Enter') doAdjust();
+}
+function startDayOne(){
+  renderProgressState();
+  showToast('已进入 Day 1：先把行前装备和营地搞定');
+}
+function savePlanDemo(){
+  showToast('计划已保存到「用得上计划」（Demo）');
+}
+async function doAdjust(){
+  const input = document.getElementById('adjustInput');
+  const v = input?.value.trim() || '';
+  if(!v){
+    showToast('先写一句你想怎么调整，比如：今天任务太多');
+    updateAdjustButton();
+    return;
+  }
+  setAdjustLoading(true);
+  showToast('正在根据你的反馈调整计划…');
+  renderGeneratingState(`收到：${v}\n我先保留最高收益任务，再压掉低优先级动作…`);
+  const typing = simulateTyping('我把折腾的部分砍掉，只留最省心、最出片的安排。');
+  await typing;
+  if(__planCache[v]){ renderPlan(__planCache[v], {adjusted:true, real:true}); setAdjustLoading(false); showToast('✨ 已按你的话实时重排'); return; } // 预热命中：秒出真实重排
+  const fb = getAdjustedPlan();
+  renderPlan(fb, {adjusted:true});         // 先秒出兜底版，不白屏
+  const real = await callLLM(v);           // 后台真实调整（带上一版，只改该动的）
+  if(real && real !== fb && getCurrentView()==='view-deliverable'){
+    renderPlan(real, {adjusted:true, real:true});
+    showToast('✨ 已按你的话实时重排');
+  }else{
+    showToast('已精简：只留最省心、最出片的安排');
+  }
+  setAdjustLoading(false);
+}
+function quickAdjust(){
+  const input = document.getElementById('adjustInput');
+  if(input){
+    input.value = '想轻松点，帮我精简';
+    updateAdjustButton();
+  }
+  doAdjust();
+}
+
+/* ===================== P2：产品完整状态 ===================== */
+const EXECUTION_TASKS = [
+  {id:'t1', title:'列好三类打包清单', detail:'按装备 / 食材 / 氛围分三类，逐项打勾，别落下天幕和地钉。'},
+  {id:'t2', title:'提前 3 天预约营地', detail:'确认能开车到、有卫生间，把预约截图存好。'},
+  {id:'t3', title:'查天气 + 腌好食材', detail:'6 级风以上就改期；出发前把肉腌上，到场直接烤。'}
+];
+function renderProgressState(doneIds=[]){
+  const doneSet = new Set(doneIds);
+  const done = EXECUTION_TASKS.filter(t=>doneSet.has(t.id)).length;
+  const progress = Math.round(done / EXECUTION_TASKS.length * 100);
+  document.getElementById('subtitle').textContent = 'Day 1 执行中 · 把计划变成进度';
+  document.getElementById('view-progress').innerHTML = `
+    <div class="progress-head">
+      <div class="progress-title">Day 1 已开始</div>
+      <div class="progress-copy">用得上不只生成计划，还会把今天的产出拆成可勾选动作。完成一项，进度就往前推一格。</div>
+      <div class="progress-bar" style="--progress:${progress}%"><i></i></div>
+      <div class="why-card" style="margin:12px 0 0; box-shadow:none;">
+        <div class="why-title">今日目标</div>
+        <div class="why-copy">先把行前该买、该订的搞定，别到现场抓瞎。</div>
+        <div class="why-metrics"><span>${done}/${EXECUTION_TASKS.length} 已完成</span><span>${progress}%</span><span>${progress===100?'Day 1 可收尾':'继续推进'}</span></div>
+      </div>
+    </div>
+    <div class="task-list">
+      ${EXECUTION_TASKS.map(t=>`
+        <label class="task-row ${doneSet.has(t.id)?'done':''}">
+          <input type="checkbox" data-task-id="${escapeHtml(t.id)}" ${doneSet.has(t.id)?'checked':''} onchange="toggleTask('${t.id}', this.checked)" />
+          <span><b>${escapeHtml(t.title)}</b><span>${escapeHtml(t.detail)}</span></span>
+        </label>`).join('')}
+    </div>
+    <div class="state-actions" style="margin-top:14px;">
+      <button class="primary" onclick="renderPlan(getMainPlan())">回到计划</button>
+      <button class="ghost" onclick="savePlanDemo()">保存进度</button>
+    </div>`;
+  show('view-progress');
+}
+function toggleTask(taskId, checked){
+  const checkedIds = [...document.querySelectorAll('#view-progress input[type=checkbox]:checked')]
+    .map(input=>input.dataset.taskId)
+    .filter(Boolean);
+  const next = new Set(checkedIds);
+  if(checked) next.add(taskId); else next.delete(taskId);
+  renderProgressState([...next]);
+  setDemoStatus(next.size === EXECUTION_TASKS.length ? 'Day 1 完成：可以进入 Day 2' : `已更新进度：${next.size}/${EXECUTION_TASKS.length}`);
+}
+function renderEmptyState(){
+  document.getElementById('subtitle').textContent = '暂时没有可唤醒的升温意图';
+  document.getElementById('view-progress').innerHTML = `
+    <div class="state-card">
+      <div class="state-emoji">🫧</div>
+      <div class="state-title">这批收藏还不够成一条任务线</div>
+      <div class="state-copy">搭子没有硬编计划：当前收藏太分散，缺少同一主题的连续信号。你可以手动输入一个目标，或者回到示例数据继续演示。</div>
+      <div class="state-actions">
+        <button class="primary" onclick="resetDemoState()">回到示例收藏</button>
+        <button class="ghost" onclick="renderManualGoalState()">手动输入目标</button>
+      </div>
+    </div>`;
+  show('view-progress');
+}
+function renderManualGoalState(){
+  document.getElementById('view-progress').innerHTML = `
+    <div class="state-card">
+      <div class="state-emoji">✍️</div>
+      <div class="state-title">告诉用得上你现在想完成什么</div>
+      <div class="state-copy">例如：这周末去露营、把收藏的菜谱变成一周晚餐、把健身收藏变成一周训练表。</div>
+      <div class="adjust" style="position:static; transform:none; max-width:none; padding:0; border:0; background:transparent; backdrop-filter:none;">
+        <input id="manualGoalInput" placeholder="输入一个目标" onkeydown="if(event.key==='Enter') retryGeneration()" />
+        <button onclick="retryGeneration()">生成</button>
+      </div>
+    </div>`;
+  show('view-progress');
+}
+function renderFailureState(){
+  document.getElementById('subtitle').textContent = '生成失败 · 但 Demo 不翻车';
+  document.getElementById('view-progress').innerHTML = `
+    <div class="state-card">
+      <div class="state-emoji">⚠️</div>
+      <div class="state-title">刚刚生成失败了</div>
+      <div class="state-copy">真实 API 或网络不稳定时，现场不能白屏。这里提供重试和本地兜底计划两条路。</div>
+      <div class="state-actions">
+        <button class="primary" onclick="retryGeneration()">重试生成</button>
+        <button class="ghost" onclick="renderPlan(getMainPlan())">使用本地兜底计划</button>
+      </div>
+    </div>`;
+  show('view-progress');
+}
+async function retryGeneration(){
+  renderGeneratingState('正在重试：优先使用本地兜底计划，保证现场可继续演示…');
+  await wait(700);
+  renderPlan(getMainPlan());
+  showToast('已恢复：使用本地兜底计划继续演示');
+}
+
+/* ===================== 自动演示 / 录屏模式 ===================== */
+let demoRunning = false;
+function wait(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+function setDemoStatus(text){
+  const el = document.getElementById('demoStatus');
+  if(!el) return;
+  el.textContent = text;
+  el.classList.add('show');
+}
+function setDemoButton(running){
+  const btn = document.getElementById('demoBtn');
+  if(!btn) return;
+  btn.classList.toggle('running', running);
+  btn.textContent = running ? '演示中…' : '▶ 自动演示';
+}
+function resetDemoState(){
+  awakened = false;
+  document.getElementById('subtitle').textContent = '把刷过的好内容，真正用上';
+  renderCollections(false);
+  show('view-collections');
+}
+function getShareUrl(){
+  const params = new URLSearchParams(location.search);
+  return params.get('share') || location.href;
+}
+const QR_DEMO_URL = 'http://10.206.99.251:9877/index.html';
+const QR_DEMO_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXIAAAFyAQAAAADAX2ykAAACvklEQVR4nO2bTW6zMBCG3xmQugSpB8hRyA2+s/YG8VFygEiwjASaT2ObBGhlyCKpaeZdgI2fxUiW5w8gwSNy/BAOGJ8Wr6wvZXxavLK+lPFp8cr6UsanxSvrSxn/DjxFlYCrBwI6PwLo2I1rxxfas138APuOPESFxt/aQoCqB1D5uaotZIKccrOfjd/Ed/GEyqn70F31h5jCs3Cw5/xWsfF58U2rZVBdCFGt2/3b9qyI14CF3p2nI/ToelUiMer+nj1r4lXivfky3ivtc3SAoCt6as4ENKchrErG9rPxW3jnU2SfMIcHmml1H7qzQ0if5/xmsfEZnF+5zQW4Urx0g44ka/vZ+C3177ErwwWOdIRiEnppEpPztH+7+D3rX69YBOtQi+Cm1fx5LIet/t29f3akqdWXT7LGvKs5lzqlXO1n49MSL39MG+m14NXUKlwwOcSRy81+Nj4tic3HfjZVJ91ouzKMdNX88x75Mt67T6HmBNwcsXplxJGrW6E87Wfjt/U3rtpw/uxjJD4IqPkaSNyhL0O7I0/72fi0JMRVFBqEfSatXjlEYgSvPOVys5+NT0vu0g0NLwmbe0yu7tmX7e9+97fVcah1+zFhbv2r35g62/7umCdtWIlorRvO7/lD4A4+p/ZvCq1/tff6V6IbjiomNTF8EWzxd4887gVvdNKqOC1mjUvb353nV6oQf2XW1YD1N3Ze/1KcFb24Ywnyr/sdFUJaE8PVl1fZw8Y/pz/5/VtJuVdKFn/3yuOnhnOsitobZPXvXvlyMRdtTY4qekJ1mX3ikZv9bPxDPPmvNhxp/VsP5Cth76nt/4U/8v0khlIvBFTeQV9J3L+LPnuFPWz8M+JvVPw/ZYy/hU5v0dni79/4fhIy2WmEueRqPxufFKeXv8n4tHhlfSnj0+KV9aWMT4tX1pcyPq1n51f/AfJd91MbwqL6AAAAAElFTkSuQmCC';
+function makeQrDataURL(text){
+  try{
+    if(typeof qrcode==='undefined') return '';           // 库没加载时退回占位
+    const qr = qrcode(0,'M'); qr.addData(String(text)); qr.make();
+    return qr.createDataURL(6, 12);                       // cellSize, margin → 约 200px，匹配弹窗
+  }catch(e){ console.warn('[qr] 生成失败', e); return ''; }
+}
+function openQrShare(){
+  const url = getShareUrl();                              // 当前页面真实地址（现场=你电脑的局域网 IP）
+  const mask = document.getElementById('qrMask');
+  const urlText = document.getElementById('qrUrlText');
+  const img = document.getElementById('qrImage');
+  if(urlText) urlText.textContent = url;
+  const dataUrl = makeQrDataURL(url);
+  if(img) img.src = dataUrl || QR_DEMO_DATA_URL;          // 动态真码；万一库没载到退回占位图
+  if(mask) mask.classList.add('show');
+  setQrFullscreen(false);
+  setDemoStatus(dataUrl ? '已按当前访问地址生成二维码，手机扫码即玩' : '二维码占位（请确认 qrcode.js 已加载）');
+}
+function setQrFullscreen(enabled){
+  const mask = document.getElementById('qrMask');
+  const btn = document.getElementById('qrFullscreenBtn');
+  if(!mask) return;
+  mask.classList.toggle('fullscreen', !!enabled);
+  if(btn) btn.textContent = enabled ? '缩回小窗' : '全屏放大';
+}
+function toggleQrFullscreen(){
+  const mask = document.getElementById('qrMask');
+  const next = !mask?.classList.contains('fullscreen');
+  setQrFullscreen(next);
+  setDemoStatus(next ? '已切换全屏二维码：适合投屏扫码' : '已缩回二维码小窗');
+}
+function closeQrShare(event){
+  if(event && event.target && event.target.id !== 'qrMask') return;
+  const mask = document.getElementById('qrMask');
+  if(mask){
+    mask.classList.remove('show');
+    mask.classList.remove('fullscreen');
+  }
+  const btn = document.getElementById('qrFullscreenBtn');
+  if(btn) btn.textContent = '全屏放大';
+}
+async function copyShareLink(){
+  const url = getShareUrl();
+  try{
+    await navigator.clipboard.writeText(url);
+    setDemoStatus('已复制手机访问链接：' + url);
+  }catch(e){
+    setDemoStatus('手机访问链接：' + url);
+  }
+}
+function updateShareButton(){
+  const btn = document.getElementById('shareBtn');
+  if(!btn) return;
+  const isLocalhost = ['127.0.0.1','localhost'].includes(location.hostname);
+  btn.textContent = isLocalhost ? '📱 扫码打开' : '📋 复制链接';
+}
+async function runAutoDemo(){
+  if(demoRunning) return;
+  demoRunning = true;
+  setDemoButton(true);
+  try{
+    setDemoStatus('第 1 步：展示收藏夹黑洞');
+    resetDemoState();
+    await wait(1200);
+
+    setDemoStatus('第 2 步：唤醒收藏夹，识别升温意图');
+    awaken();
+    await wait(1500);
+
+    setDemoStatus('第 3 步：模拟搭子主动提醒');
+    goSignal();
+    await wait(1800);
+
+    setDemoStatus('第 4 步：把收藏变成两天一夜露营计划');
+    await goDeliver();
+    await wait(1500);
+
+    setDemoStatus('第 5 步：用户说想轻松点，自动精简');
+    const ai = document.getElementById('adjustInput'); if(ai){ ai.value = '想轻松点，帮我精简'; updateAdjustButton(); }
+    await doAdjust();                       // await 到真实重排替换完成（录屏可剪掉等待）
+    await wait(1500);
+
+    setDemoStatus('演示完成：完整闭环已跑通');
+  }catch(e){
+    console.error('[auto-demo] failed', e);
+    setDemoStatus('演示中断：请手动继续');
+  }finally{
+    demoRunning = false;
+    setDemoButton(false);
+    setTimeout(()=>document.getElementById('demoStatus')?.classList.remove('show'), 2600);
+  }
+}
+
+/* ===================== AI 配置（自建中转 · OpenAI 兼容 · 主力 gpt-5.5）===================== */
+const AI_CONFIG = {
+  endpoint: 'https://api.handsfreeclub.com/h5api/v1/chat/completions',   // 自建中转的隔离跨域入口（CORS 已开，对生产 /v1/ 零影响）
+  apiKey:   (typeof window!=='undefined' && window.SHIGUANG_AI_KEY) || '', // key 外置在 config.local.js（已 .gitignore，不进仓库）；没 key 自动走本地兜底、不暴露
+  model:    'gpt-5.5'
+};
+
+/* 把 相关收藏（含每条视频"看过才知道"的独有干货）+ 情境 拼成 Prompt2，直接输出前端能用的结构（days） */
+function buildPrompt2(items, intentCat, userContext, prevPlan){
+  const list = items.map(i=>{
+    const dg = (i.key_points && i.key_points.length) ? `；这条视频独有干货：${i.key_points.join('、')}` : '';
+    return `- 《${i.title}》｜当时想：${i.motivation||'—'}${dg}`;
+  }).join('\n');
+  const base = prevPlan ? `\n这是上一版计划（请在此基础上"只改用户要动的部分"，其余天尽量原样保留，保持连续感）：\n${JSON.stringify(prevPlan)}\n` : '';
+  return `你是产品「用得上」里的收藏转行动助手。把用户在「${intentCat}」上收藏的这些视频里的方法，整合成能直接照做的产物——不是总结视频，是把它变成行动。
+情境：${userContext}${base}
+相关收藏（每条都附了"看过这条才知道"的独有干货）：
+${list}
+
+只输出如下 JSON（不要任何多余文字、不要 markdown）：
+{"title":"给产物起个让人想用的名字","based_on":"一句话点名用到哪几条收藏，并显性说明你跳过了哪些无关收藏（如沙雕动物 / 穿搭）","days":[{"d":"Day 1","th":"今天主题 · 约X小时","goal":"今天要达成的目标","videos":["要看的收藏标题"],"key_points":["关键动作，必须取自上面对应视频的独有干货，禁止写通用常识"],"template":"答题或执行模板","output":"今日产出","from":"出自你存的「某条视频」「另一条」"}]}
+硬性要求：
+1. 正好排 3 天，不多不少；
+2. 出处自洽：每条 key_point 复述的方法，必须和同一天 from 点名的视频是同一件事，严禁张冠李戴；
+3. key_points 要用上面给的"视频独有干货"，体现"只有看过你这条收藏才知道"，不能是任何 AI 都能说的通用应试话；
+4. based_on 要显性点出你剔掉了哪些无关收藏（沙雕动物、穿搭），让"识别能力"看得见；
+5. 这是"行前准备 1 天 + 两天一夜露营"：Day 1 为行前（备装备 / 订营地，约 1-2 小时），Day 2 到场扎营玩一整天，Day 3 收拾返程、默认轻；每天 th 标上大致时段；
+6. from 用「」中文方括号包视频名，名字要和"相关收藏"里的标题一致。`;
+}
+
+/* ===================== 接 AI 的唯一入口（魔法核心）===================== */
+const __planCache = {};
+const __inflight  = {};
+async function callLLM(userAdjust, opts={}){
+  const intentCat   = getIntentSignal().cat;
+  const items       = getFavorites().filter(i=>i.cat===intentCat);
+  const userContext = userAdjust ? ('在上版计划基础上调整：'+userAdjust)
+                                 : '想趁周末去露营，把这些攻略整合成两天一夜的露营计划 + 装备清单';
+  const cacheKey    = userAdjust || '__main__';
+  if(__planCache[cacheKey]) return __planCache[cacheKey];                 // 预热/已生成命中：直接秒出真·实时结果
+  if(!AI_CONFIG.endpoint || !AI_CONFIG.apiKey){                           // 演示模式：无 key 走本地兜底、不暴露 key
+    return userAdjust ? getAdjustedPlan() : getMainPlan();
+  }
+  if(__inflight[cacheKey]) return __inflight[cacheKey];                   // 同一请求已在飞（如预热）：复用，避免重复打
+  const run = (async()=>{
+    const prevPlan = userAdjust ? __planCache['__main__'] : null;        // 即兴调整把上一版喂回去，保持连续
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), opts.timeout || (userAdjust ? 45000 : 55000)); // 真实生成约 35-42s，超时给足让它跑得完（前台已先秒出兜底，等得起）
+    try{
+      const res = await fetch(AI_CONFIG.endpoint, {
+        method:'POST', signal: ctrl.signal,
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+AI_CONFIG.apiKey},
+        body: JSON.stringify({ model:AI_CONFIG.model, temperature: userAdjust ? 0.3 : 0.5, // 调整更稳、主计划留点发挥
+          messages:[{role:'user', content: buildPrompt2(items, intentCat, userContext, prevPlan)}] })
+      });
+      const data = await res.json();
+      let text = (data.choices && data.choices[0] && data.choices[0].message.content) || '';
+      text = text.replace(/```json|```/g,'').trim();                     // 去掉可能的 markdown 包裹
+      const s = text.indexOf('{'), e = text.lastIndexOf('}');            // 抠出 JSON 主体，容忍前后噪声
+      if(s>=0 && e>s) text = text.slice(s, e+1);
+      const plan = normalizePlanData(JSON.parse(text));
+      if(!plan.days || !plan.days.length) throw new Error('返回缺 days');
+      plan.days.forEach(d=>{ if(d.from) d.from = d.from.replace(/[《》]/g,''); }); // 模型偶尔在「」里又套《》，清掉防穿帮
+      __planCache[cacheKey] = plan;                                      // 缓存成功结果
+      return plan;
+    }catch(e){
+      console.warn('[callLLM] 调用失败，用兜底计划：', e);
+      return userAdjust ? getAdjustedPlan() : getMainPlan();             // ★兜底：API 挂了/超时 demo 也不翻车
+    }finally{
+      clearTimeout(timer);
+    }
+  })();
+  __inflight[cacheKey] = run;
+  try{ return await run; } finally { delete __inflight[cacheKey]; }
+}
+
+/* 页面加载即静默预生成主计划 + 高频调整热词，用户走到"生成计划/压一压"时秒出（无 key 时此函数空转、不报错）*/
+async function prewarm(){
+  try{
+    await callLLM(null);                                  // 先把主计划焐热（也为调整提供 prevPlan）
+    ['想轻松点，帮我精简'].forEach(p=>{ callLLM(p); });   // 再后台静默预热高频调整（与 quickAdjust 文案一致）
+  }catch(e){ /* 预热失败无所谓，主路径有兜底 */ }
+}
+
+updateShareButton();
+renderCollections(false);
+setTimeout(prewarm, 300);   // 进页面就后台焐热真·AI 计划
+</script>
+</body>
+</html>
