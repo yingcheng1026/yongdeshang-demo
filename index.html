@@ -601,13 +601,14 @@ function setStreamText(text){
   el.innerHTML = `${escapeHtml(text)}<span class="cursor"></span>`;
 }
 async function simulateTyping(label){
-  const text = label || '我看到了 8 条露营攻略，正在帮你排成能照做的两天一夜计划。';
+  const text = label || '收到～正在翻你这 8 条露营收藏：帐篷、营地、天幕、露营菜单…\n提取每条视频里「看过才知道」的关键窍门…\n按「行前准备 + 两天一夜」排成能直接照做的计划…\n核对每一条都标清出自你哪条收藏…\n好了，给你 ↓';
   let acc = '';
   for(const ch of text){
     acc += ch;
     setStreamText(acc);
-    await new Promise(r=>setTimeout(r, 18));
+    await new Promise(r=>setTimeout(r, 28));
   }
+  await new Promise(r=>setTimeout(r, 700));   // 打完停一下、像模型收尾，避免“一下蹦出来”
 }
 function renderPlan(plan, options={}){
   document.getElementById('subtitle').textContent = options.adjusted ? '已根据反馈调整计划' : '8 条收藏，拧成两天一夜露营计划';
@@ -706,7 +707,7 @@ async function doAdjust(){
   setAdjustLoading(true);
   showToast('正在根据你的反馈调整计划…');
   renderGeneratingState(`收到：${v}\n我先保留最高收益任务，再压掉低优先级动作…`);
-  const typing = simulateTyping('我把折腾的部分砍掉，只留最省心、最出片的安排。');
+  const typing = simulateTyping('收到「想轻松点」～正在砍掉折腾的部分…\n保留最省心、最出片的安排…\n把每天压成最必要的几件事…\n重新给你排好 ↓');
   await typing;
   if(__planCache[v]){ renderPlan(__planCache[v], {adjusted:true, real:true}); setAdjustLoading(false); showToast('✨ 已按你的话实时重排'); return; } // 预热命中：秒出真实重排
   const fb = getAdjustedPlan();
